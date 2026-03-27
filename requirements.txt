@@ -6,4 +6,4 @@ pydub>=0.25.1
 optimum[onnxruntime]>=1.17.0
 transformers>=4.38.0
 edge-tts>=6.1.9
-optimum[onnxruntime]>=1.17.0
+

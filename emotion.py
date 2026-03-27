@@ -11,11 +11,6 @@ from transformers import AutoTokenizer, pipeline
 from optimum.onnxruntime import ORTModelForSequenceClassification
 
 MODEL_ID = "SamLowe/roberta-base-go_emotions-onnx"
-model = ORTModelForSequenceClassification.from_pretrained(
-    MODEL_ID,
-    subfolder="onnx",
-    file_name="model_quantized.onnx"
-)
 
 _classifier = None  # lazy singleton
 
@@ -26,10 +21,10 @@ def load_classifier():
     if _classifier is None:
         print("[emotion] Loading ONNX model...")
         model = ORTModelForSequenceClassification.from_pretrained(
-         MODEL_ID,
-         subfolder="onnx",
-         file_name="model_quantized.onnx"
-)
+            MODEL_ID,
+            subfolder="onnx",
+            file_name="model_quantized.onnx"
+        )
         tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
         _classifier = pipeline(
             task="text-classification",

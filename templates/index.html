@@ -626,15 +626,15 @@ function renderBreakdown(chunks) {
       </div>
 
       <div class="chunk-params">
-        <span class="param-chip">stability <span>${p.stability.toFixed(2)}</span></span>
-        <span class="param-chip">style <span>${p.style.toFixed(2)}</span></span>
-        <span class="param-chip">speed <span>${p.speed.toFixed(2)}</span></span>
+        <span class="param-chip">rate <span>${p.rate > 0 ? '+' : ''}${p.rate.toFixed(0)}%</span></span>
+        <span class="param-chip">pitch <span>${p.pitch > 0 ? '+' : ''}${p.pitch.toFixed(0)}Hz</span></span>
+        <span class="param-chip">volume <span>${p.volume > 0 ? '+' : ''}${p.volume.toFixed(0)}%</span></span>
       </div>
 
       <div class="param-bars">
-        ${paramBar('stability', p.stability, col.border)}
-        ${paramBar('style',     p.style,     col.border)}
-        ${paramBar('speed',     (p.speed - 0.7) / 0.5, col.border, p.speed.toFixed(2))}
+        ${paramBar('rate',   (p.rate   + 30) / 60, col.border, (p.rate   > 0 ? '+' : '') + p.rate.toFixed(0)   + '%')}
+        ${paramBar('pitch',  (p.pitch  + 15) / 30, col.border, (p.pitch  > 0 ? '+' : '') + p.pitch.toFixed(0)  + 'Hz')}
+        ${paramBar('volume', (p.volume + 30) / 50, col.border, (p.volume > 0 ? '+' : '') + p.volume.toFixed(0) + '%')}
       </div>
     `;
 

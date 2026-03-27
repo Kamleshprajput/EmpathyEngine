@@ -9,10 +9,12 @@ Endpoints:
 
 import os
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from concurrent.futures import ThreadPoolExecutor
 from engine import process
+import asyncio
 
 app = FastAPI(title="Empathy Engine", version="1.0.0")
 
@@ -20,6 +22,8 @@ OUTPUT_DIR = "outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 app.mount("/audio", StaticFiles(directory=OUTPUT_DIR), name="audio")
+
+executor = ThreadPoolExecutor(max_workers=2)
 
 
 class SynthesizeRequest(BaseModel):
@@ -36,14 +40,17 @@ async def index():
 @app.post("/synthesize")
 async def synthesize_route(body: SynthesizeRequest):
     try:
-        result = process(body.text.strip())
+        # Run blocking pipeline in thread pool so it doesn't block the event loop
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(executor, process, body.text.strip())
         filename = os.path.basename(result["output_path"])
         result["audio_url"] = f"/audio/{filename}"
         return result
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

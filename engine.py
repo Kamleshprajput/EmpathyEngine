@@ -18,10 +18,6 @@ def process(text: str, output_filename: str = None) -> dict:
     """
     Full pipeline: text → emotional mp3.
 
-    Args:
-        text            : input text to synthesize
-        output_filename : optional mp3 filename (auto-generated if None)
-
     Returns:
         dict with:
           - output_path   : path to final mp3
@@ -45,7 +41,9 @@ def process(text: str, output_filename: str = None) -> dict:
 
         # Full 5-layer voice param resolution
         params = get_chunk_params(emotion_outputs, chunk, prev_params)
-        prev_params = {k: params[k] for k in ("stability", "style", "speed")}
+
+        # Carry forward only the numeric params for smoothing (edge-tts keys)
+        prev_params = {k: params[k] for k in ("rate", "pitch", "volume", "break_ms")}
 
         chunks_with_params.append({"text": chunk, "params": params})
         all_emotions.append({
@@ -58,13 +56,13 @@ def process(text: str, output_filename: str = None) -> dict:
                 if e["score"] >= 0.10
             ],
             "voice_params": {
-                "stability": params["stability"],
-                "style":     params["style"],
-                "speed":     params["speed"],
+                "rate":   round(params["rate"],   1),
+                "pitch":  round(params["pitch"],  1),
+                "volume": round(params["volume"], 1),
             },
         })
 
-    # Determine overall dominant emotion (highest single score across all chunks)
+    # Overall dominant = chunk with highest single score
     overall_dominant = max(
         all_emotions,
         key=lambda x: x["dominant_score"]
@@ -76,8 +74,9 @@ def process(text: str, output_filename: str = None) -> dict:
         output_filename = f"output_{ts}.mp3"
 
     output_path = os.path.join(OUTPUT_DIR, output_filename)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # TTS synthesis + stitching
+    # TTS synthesis
     synthesize(chunks_with_params, output_path)
 
     ms = int((time.time() - t0) * 1000)

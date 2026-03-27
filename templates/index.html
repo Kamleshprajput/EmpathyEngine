@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Empathy Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0a0a0b;
+      --surface:   #111114;
+      --border:    #1e1e24;
+      --border-hi: #2e2e38;
+      --text:      #e8e8f0;
+      --muted:     #5a5a70;
+      --accent:    #c084fc;
+      --accent-dim:#7c3aed44;
+      --green:     #4ade80;
+      --amber:     #fbbf24;
+      --red:       #f87171;
+      --blue:      #60a5fa;
+
+      --emotion-joy:         #fde68a;
+      --emotion-sadness:     #93c5fd;
+      --emotion-anger:       #fca5a5;
+      --emotion-fear:        #d8b4fe;
+      --emotion-surprise:    #6ee7b7;
+      --emotion-neutral:     #94a3b8;
+      --emotion-love:        #f9a8d4;
+      --emotion-excitement:  #fdba74;
+      --emotion-default:     #c4b5fd;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Instrument Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    /* ── Header ── */
+    header {
+      margin-bottom: 3.5rem;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #7c3aed, #c084fc);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 0 24px #7c3aed55;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.55rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .tagline {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.04em;
+      margin-top: 0.25rem;
+    }
+
+    /* ── Input card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.2s;
+    }
+
+    .card:focus-within {
+      border-color: var(--border-hi);
+    }
+
+    .card-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 1.2rem 0;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .card-label .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: vertical;
+      color: var(--text);
+      font-family: 'Instrument Sans', sans-serif;
+      font-size: 1rem;
+      line-height: 1.7;
+      padding: 0.75rem 1.2rem 1.2rem;
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .char-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    /* ── Button ── */
+    .btn-synthesize {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Instrument Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.65rem 1.4rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px #7c3aed44;
+    }
+
+    .btn-synthesize:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px #7c3aed66;
+    }
+
+    .btn-synthesize:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-synthesize:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.4rem 1.2rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .loading.visible { display: flex; }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-hi);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Audio player ── */
+    .player-card {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.4rem 1.4rem 1.2rem;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .player-card.visible { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .player-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .player-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .dominant-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.7rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-hi);
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    audio {
+      width: 100%;
+      height: 36px;
+      outline: none;
+    }
+
+    audio::-webkit-media-controls-panel {
+      background: var(--border);
+    }
+
+    .perf-note {
+      margin-top: 0.75rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    /* ── Chunk breakdown ── */
+    .breakdown {
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      animation: fadeUp 0.4s ease 0.1s both;
+    }
+
+    .breakdown.visible { display: flex; }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .chunk-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.5rem 1rem;
+      align-items: start;
+    }
+
+    .chunk-text {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text);
+      grid-column: 1 / -1;
+    }
+
+    .chunk-emotion {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .emotion-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 20px;
+      border: 1px solid;
+      opacity: 0.9;
+    }
+
+    .chunk-params {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .param-chip {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.1rem 0.45rem;
+    }
+
+    .param-chip span {
+      color: var(--text);
+    }
+
+    /* ── Bar meter ── */
+    .param-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-top: 0.6rem;
+      grid-column: 1 / -1;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+
+    .bar-label { width: 56px; text-align: right; }
+
+    .bar-track {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .bar-val { width: 32px; }
+
+    /* ── Error ── */
+    .error-box {
+      display: none;
+      background: #1a0a0a;
+      border: 1px solid #5a1a1a;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      color: var(--red);
+      font-size: 0.88rem;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .error-box.visible { display: block; }
+
+    /* ── Emotion color map ── */
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">🎙</div>
+      <h1>Empathy Engine</h1>
+    </div>
+    <p class="tagline">// dynamic vocal synthesis · 28-emotion model · 5-layer pipeline</p>
+  </header>
+
+  <div class="card">
+    <div class="card-label">
+      <span class="dot"></span>
+      Input Text
+    </div>
+    <textarea
+      id="inputText"
+      placeholder="Type or paste your text here. Each clause will be analysed for emotion and spoken with its own voice profile..."
+      maxlength="2000"
+    ></textarea>
+    <div class="card-footer">
+      <span class="char-count"><span id="charCount">0</span> / 2000</span>
+      <button class="btn-synthesize" id="synthBtn" onclick="synthesize()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        Synthesize
+      </button>
+    </div>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span id="loadingMsg">Analysing emotion & synthesizing voice...</span>
+    </div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="player-card" id="playerCard">
+    <div class="player-header">
+      <span class="player-title">// output</span>
+      <span class="dominant-badge" id="dominantBadge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+        <span id="dominantLabel">—</span>
+      </span>
+    </div>
+    <audio id="audioPlayer" controls></audio>
+    <div class="perf-note" id="perfNote"></div>
+  </div>
+
+  <div class="breakdown" id="breakdown">
+    <div class="section-label">// per-clause analysis</div>
+  </div>
+
+</div>
+
+<script>
+const EMOTION_COLORS = {
+  joy:         { bg: '#78350f22', border: '#d97706', text: '#fde68a' },
+  excitement:  { bg: '#7c2d1222', border: '#ea580c', text: '#fdba74' },
+  amusement:   { bg: '#71350022', border: '#d97706', text: '#fcd34d' },
+  love:        { bg: '#831843aa', border: '#db2777', text: '#f9a8d4' },
+  admiration:  { bg: '#1e3a5f22', border: '#2563eb', text: '#93c5fd' },
+  gratitude:   { bg: '#14532d22', border: '#16a34a', text: '#86efac' },
+  optimism:    { bg: '#78350f22', border: '#ca8a04', text: '#fde68a' },
+  pride:       { bg: '#4a044e22', border: '#a21caf', text: '#e879f9' },
+  relief:      { bg: '#14532d22', border: '#15803d', text: '#4ade80' },
+  approval:    { bg: '#14532d22', border: '#22c55e', text: '#86efac' },
+  desire:      { bg: '#831843aa', border: '#e11d48', text: '#fda4af' },
+  curiosity:   { bg: '#1e3a5f22', border: '#0284c7', text: '#7dd3fc' },
+  confusion:   { bg: '#2d1b6922', border: '#7c3aed', text: '#c4b5fd' },
+  realization: { bg: '#1e3a5f22', border: '#0369a1', text: '#7dd3fc' },
+  surprise:    { bg: '#14532d22', border: '#059669', text: '#6ee7b7' },
+  caring:      { bg: '#831843aa', border: '#be185d', text: '#f9a8d4' },
+  sadness:     { bg: '#1e3a5f22', border: '#3b82f6', text: '#93c5fd' },
+  grief:       { bg: '#1e3a5f22', border: '#1d4ed8', text: '#bfdbfe' },
+  remorse:     { bg: '#1e3a5f22', border: '#4f46e5', text: '#a5b4fc' },
+  disappointment: { bg: '#2d1b6922', border: '#6d28d9', text: '#c4b5fd' },
+  embarrassment:  { bg: '#831843aa', border: '#9d174d', text: '#fda4af' },
+  anger:       { bg: '#450a0a22', border: '#ef4444', text: '#fca5a5' },
+  annoyance:   { bg: '#450a0a22', border: '#dc2626', text: '#fca5a5' },
+  disapproval: { bg: '#450a0a22', border: '#b91c1c', text: '#fecaca' },
+  disgust:     { bg: '#1a2e0522', border: '#65a30d', text: '#bef264' },
+  fear:        { bg: '#2d1b6922', border: '#7c3aed', text: '#d8b4fe' },
+  nervousness: { bg: '#2d1b6922', border: '#6d28d9', text: '#c4b5fd' },
+  neutral:     { bg: '#1e1e2422', border: '#475569', text: '#94a3b8' },
+};
+
+function emotionColor(label) {
+  return EMOTION_COLORS[label] || { bg: '#2d1b6922', border: '#7c3aed', text: '#c4b5fd' };
+}
+
+const textarea = document.getElementById('inputText');
+const charCount = document.getElementById('charCount');
+
+textarea.addEventListener('input', () => {
+  charCount.textContent = textarea.value.length;
+});
+
+async function synthesize() {
+  const text = textarea.value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById('synthBtn');
+  const loading = document.getElementById('loading');
+  const errorBox = document.getElementById('errorBox');
+  const playerCard = document.getElementById('playerCard');
+  const breakdown = document.getElementById('breakdown');
+
+  // Reset UI
+  btn.disabled = true;
+  loading.classList.add('visible');
+  errorBox.classList.remove('visible');
+  playerCard.classList.remove('visible');
+  breakdown.classList.remove('visible');
+
+  const msgs = [
+    'Chunking text into prosodic clauses...',
+    'Running emotion detection per clause...',
+    'Blending voice profiles...',
+    'Synthesizing with ElevenLabs...',
+  ];
+  let mi = 0;
+  const msgEl = document.getElementById('loadingMsg');
+  const msgInterval = setInterval(() => {
+    mi = (mi + 1) % msgs.length;
+    msgEl.textContent = msgs[mi];
+  }, 2200);
+
+  try {
+    const res = await fetch('/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    const data = await res.json();
+    clearInterval(msgInterval);
+
+    if (!res.ok || data.error) {
+      throw new Error(data.error || 'Unknown error');
+    }
+
+    renderPlayer(data);
+    renderBreakdown(data.chunks);
+
+  } catch (err) {
+    clearInterval(msgInterval);
+    errorBox.textContent = '⚠ ' + err.message;
+    errorBox.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    loading.classList.remove('visible');
+  }
+}
+
+function renderPlayer(data) {
+  const playerCard = document.getElementById('playerCard');
+  const audio = document.getElementById('audioPlayer');
+  const dominantLabel = document.getElementById('dominantLabel');
+  const dominantBadge = document.getElementById('dominantBadge');
+  const perfNote = document.getElementById('perfNote');
+
+  audio.src = data.audio_url;
+  audio.load();
+
+  dominantLabel.textContent = data.dominant;
+  const col = emotionColor(data.dominant);
+  dominantBadge.style.background = col.bg;
+  dominantBadge.style.borderColor = col.border;
+  dominantBadge.style.color = col.text;
+
+  perfNote.textContent = `processed in ${data.processing_ms}ms · ${data.chunks.length} clause${data.chunks.length !== 1 ? 's' : ''}`;
+
+  playerCard.classList.add('visible');
+}
+
+function renderBreakdown(chunks) {
+  const breakdown = document.getElementById('breakdown');
+  // Remove old chunk rows (keep label)
+  const label = breakdown.querySelector('.section-label');
+  breakdown.innerHTML = '';
+  breakdown.appendChild(label);
+
+  chunks.forEach((chunk, i) => {
+    const col = emotionColor(chunk.dominant_emotion);
+    const p = chunk.voice_params;
+
+    const row = document.createElement('div');
+    row.className = 'chunk-row';
+    row.style.borderLeftColor = col.border;
+    row.style.borderLeftWidth = '3px';
+
+    row.innerHTML = `
+      <div class="chunk-text">${escHtml(chunk.chunk)}</div>
+
+      <div class="chunk-emotion">
+        ${chunk.top_emotions.slice(0, 4).map(e => {
+          const c = emotionColor(e.label);
+          const pct = Math.round(e.score * 100);
+          return `<span class="emotion-pill" style="background:${c.bg};border-color:${c.border};color:${c.text}">
+            ${e.label} ${pct}%
+          </span>`;
+        }).join('')}
+      </div>
+
+      <div class="chunk-params">
+        <span class="param-chip">stability <span>${p.stability.toFixed(2)}</span></span>
+        <span class="param-chip">style <span>${p.style.toFixed(2)}</span></span>
+        <span class="param-chip">speed <span>${p.speed.toFixed(2)}</span></span>
+      </div>
+
+      <div class="param-bars">
+        ${paramBar('stability', p.stability, col.border)}
+        ${paramBar('style',     p.style,     col.border)}
+        ${paramBar('speed',     (p.speed - 0.7) / 0.5, col.border, p.speed.toFixed(2))}
+      </div>
+    `;
+
+    breakdown.appendChild(row);
+  });
+
+  breakdown.classList.add('visible');
+}
+
+function paramBar(label, val, color, displayVal) {
+  const pct = Math.round(Math.max(0, Math.min(1, val)) * 100);
+  return `
+    <div class="bar-row">
+      <span class="bar-label">${label}</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span class="bar-val">${displayVal ?? val.toFixed(2)}</span>
+    </div>
+  `;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Allow Ctrl+Enter to trigger
+textarea.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) synthesize();
+});
+</script>
+</body>
+</html>

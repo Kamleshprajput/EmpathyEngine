@@ -2,7 +2,7 @@ services:
   - type: web
     name: empathy-engine
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --no-deps optimum onnxruntime && pip install -r requirements.txt
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: EDGE_TTS_VOICE

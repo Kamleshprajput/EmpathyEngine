@@ -1,10 +1,5 @@
 """
 app.py — FastAPI server for the Empathy Engine.
-
-Endpoints:
-  GET  /              → Web UI
-  POST /synthesize    → JSON: {text} → {output_path, chunks, dominant, processing_ms}
-  GET  /audio/<file>  → Serve generated mp3
 """
 
 import os
@@ -40,7 +35,6 @@ async def index():
 @app.post("/synthesize")
 async def synthesize_route(body: SynthesizeRequest):
     try:
-        # Run blocking pipeline in thread pool so it doesn't block the event loop
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(executor, process, body.text.strip())
         filename = os.path.basename(result["output_path"])
@@ -54,4 +48,5 @@ async def synthesize_route(body: SynthesizeRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app:app", host="0.0.0.0", port=port)

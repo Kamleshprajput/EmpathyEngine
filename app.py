@@ -4,14 +4,26 @@ app.py — FastAPI server for the Empathy Engine.
 
 import os
 import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from concurrent.futures import ThreadPoolExecutor
 from engine import process
+from emotion import load_classifier
 
-app = FastAPI(title="Empathy Engine", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Warm up the model before serving any requests
+    print("[app] Pre-loading emotion classifier...")
+    load_classifier()
+    print("[app] Classifier ready.")
+    yield
+
+
+app = FastAPI(title="Empathy Engine", version="1.0.0", lifespan=lifespan)
 
 OUTPUT_DIR = "outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)

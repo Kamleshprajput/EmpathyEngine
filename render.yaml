@@ -2,8 +2,14 @@ services:
   - type: web
     name: empathy-engine
     runtime: python
-    buildCommand: pip install --no-deps optimum onnxruntime && pip install -r requirements.txt
+    buildCommand: >
+      pip install -r requirements.txt &&
+      python preload.py
     startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: EDGE_TTS_VOICE
         value: en-US-JennyNeural
+      - key: HF_HOME
+        value: /opt/render/project/src/.cache/huggingface
+      - key: TRANSFORMERS_CACHE
+        value: /opt/render/project/src/.cache/huggingface

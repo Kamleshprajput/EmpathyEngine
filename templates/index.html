@@ -539,8 +539,7 @@ async function synthesize() {
     'Chunking text into prosodic clauses...',
     'Running emotion detection per clause...',
     'Blending voice profiles...',
-    'Synthesizing ...',
-    'First deployment might take some time...'
+    'Synthesizing with ElevenLabs...',
   ];
   let mi = 0;
   const msgEl = document.getElementById('loadingMsg');
@@ -556,7 +555,13 @@ async function synthesize() {
       body: JSON.stringify({ text }),
     });
 
-    const data = await res.json();
+    let data;
+    const rawText = await res.text();
+    try {
+      data = JSON.parse(rawText);
+    } catch (parseErr) {
+      throw new Error(`Server returned invalid response (status ${res.status}). The model may still be loading — please retry in 30 seconds.`);
+    }
     clearInterval(msgInterval);
 
     if (!res.ok || data.error) {

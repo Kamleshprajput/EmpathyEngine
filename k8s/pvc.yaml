@@ -1,0 +1,17 @@
+# Shared PVC so all EmpathyEngine pods can read/write generated MP3s
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: empathy-outputs-pvc
+  namespace: empathy
+spec:
+  accessModes:
+    - ReadWriteMany        # Required for multi-replica access
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName: standard   # Uncomment and change for your cloud provider
+  #   GKE  → standard-rwx  (Filestore)
+  #   EKS  → efs-sc        (EFS CSI)
+  #   AKS  → azurefile
+  #   Local → leave default (single-node only)

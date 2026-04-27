@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from concurrent.futures import ThreadPoolExecutor
 from engine import process
 from emotion import load_classifier
-
+from cache import get_cached, set_cached, cache_stats
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,25 +48,41 @@ async def index():
     with open(template_path, "r") as f:
         return f.read()
 
-
+@app.get("/cache/stats")                                 # ← NEW
+async def cache_stats_route():
+    return cache_stats()
 @app.post("/synthesize")
 async def synthesize_route(body: SynthesizeRequest):
+    text = body.text.strip()
+ 
+    # ── 1. Cache lookup ───────────────────────────────────────────────────────
+    cached = get_cached(text)
+    if cached is not None:
+        cached["cached"] = True
+        return JSONResponse(content=cached)
+ 
+    # ── 2. Full synthesis pipeline ────────────────────────────────────────────
     try:
-        loop   = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()
         result = await asyncio.wait_for(
-            loop.run_in_executor(executor, process, body.text.strip()),
-            timeout=120.0   # 2 min timeout — enough for model load + synthesis
+            loop.run_in_executor(executor, process, text),
+            timeout=120.0,
         )
         filename = os.path.basename(result["output_path"])
         result["audio_url"] = f"/audio/{filename}"
+        result["cached"] = False
+ 
+        # ── 3. Store in cache ─────────────────────────────────────────────────
+        set_cached(text, result)
+ 
         return JSONResponse(content=result)
+ 
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Synthesis timed out. Try shorter text or retry.")
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 if __name__ == "__main__":
     import uvicorn

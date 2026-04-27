@@ -1,0 +1,45 @@
+# ── App Service ───────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: empathy-service
+  namespace: empathy
+spec:
+  selector:
+    app: empathy-engine
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+
+---
+# ── Ingress (nginx-ingress-controller) ────────────────────────────────────────
+# Remove or adapt if you use a cloud load balancer / Gateway API.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: empathy-ingress
+  namespace: empathy
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "130"   # > synthesis timeout
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "130"
+    nginx.ingress.kubernetes.io/proxy-body-size: "2m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: empathy.example.com     # ← replace with your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: empathy-service
+                port:
+                  number: 80
+  # Uncomment to add TLS:
+  # tls:
+  #   - hosts:
+  #       - empathy.example.com
+  #     secretName: empathy-tls

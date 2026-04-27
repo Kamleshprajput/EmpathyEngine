@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  # ── Redis (prompt/response cache) ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: empathy-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - empathy-net
+
+  # ── EmpathyEngine API ──────────────────────────────────────────────────────
+  empathy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: empathy-engine
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_TTL: "3600"           # Cache TTL in seconds (1 hour)
+      EDGE_TTS_VOICE: "en-US-JennyNeural"
+    volumes:
+      - outputs_data:/app/outputs  # Persist generated MP3s
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s            # Give the ONNX model time to load
+    networks:
+      - empathy-net
+
+networks:
+  empathy-net:
+    driver: bridge
+
+volumes:
+  outputs_data:

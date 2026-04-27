@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: empathy-engine
+  namespace: empathy
+  labels:
+    app: empathy-engine
+    version: "1.1.0"
+spec:
+  replicas: 2                        # Scale up horizontally; Redis cache keeps responses consistent
+  selector:
+    matchLabels:
+      app: empathy-engine
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0              # Zero-downtime deploys
+  template:
+    metadata:
+      labels:
+        app: empathy-engine
+        version: "1.1.0"
+    spec:
+      # Allow time for ONNX model preload before first request
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: empathy-engine
+          image: your-registry/empathy-engine:latest   # ← replace with your image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: empathy-config
+          volumeMounts:
+            - name: outputs-storage
+              mountPath: /app/outputs
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1.5Gi"      # ONNX model needs headroom
+          # Wait until the classifier is loaded before accepting traffic
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            failureThreshold: 20   # 20 × 5s = 100s max startup
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+
+      volumes:
+        - name: outputs-storage
+          persistentVolumeClaim:
+            claimName: empathy-outputs-pvc
